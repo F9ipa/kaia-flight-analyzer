@@ -1,11 +1,11 @@
 from datetime import datetime, timedelta
 from collections import Counter
-from flask import Flask, render_template_string, request
+from flask import Flask, render_template, request
 import requests
 
 app = Flask(__name__)
 
-# كلاس التحليل الذي قمت بكتابته سابقاً مع تعديله ليناسب الويب
+# [نفس كلاس FlightAnalyzer السابق تماماً بدون أي تغيير]
 class FlightAnalyzer:
     def __init__(self):
         self.url = "https://www.kaia.sa/ext-api/flightsearch/flights"
@@ -165,77 +165,6 @@ class FlightAnalyzer:
 
 analyzer = FlightAnalyzer()
 
-# تصميم واجهة المستخدم (HTML) داخل نفس الملف لتسهيل الرفع
-HTML_TEMPLATE = """
-<!DOCTYPE html>
-<html lang="ar" dir="rtl">
-<head>
-    <meta charset="UTF-8">
-    <title>محلل رحلات مطار الملك عبدالعزيز</title>
-    <style>
-        body { font-family: Tahoma, sans-serif; background-color: #f4f7f6; margin: 0; padding: 20px; color: #333; }
-        .container { max-width: 700px; margin: auto; background: white; padding: 30px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
-        h2 { color: #004d40; text-align: center; }
-        .form-group { margin-bottom: 15px; }
-        label { display: block; margin-bottom: 5px; font-weight: bold; }
-        input { width: 100%; padding: 10px; box-sizing: border-box; border: 1px solid #ccc; border-radius: 6px; }
-        button { background: #00796b; color: white; border: none; padding: 12px; width: 100%; border-radius: 6px; font-size: 16px; cursor: pointer; }
-        button:hover { background: #004d40; }
-        .results { margin-top: 25px; border-top: 2px solid #eee; padding-top: 20px; }
-        .stat-box { display: flex; justify-content: space-between; background: #e0f2f1; padding: 10px 15px; margin-bottom: 8px; border-radius: 6px; }
-        .error { color: #d32f2f; background: #ffebee; padding: 10px; border-radius: 6px; text-align: center; }
-    </style>
-</head>
-<body>
-    <div class="container">
-        <h2>✈️ محلل رحلات T1 (دولى)</h2>
-        <form method="POST">
-            <div class="form-group">
-                <label>اليوم (رقم اليوم من الشهر، اتركه فارغاً ليوم اليوم):</label>
-                <input type="number" name="day" placeholder="مثال: 19">
-            </div>
-            <div class="form-group">
-                <label>بداية الفترة:</label>
-                <input type="time" name="start" value="00:00">
-            </div>
-            <div class="form-group">
-                <label>نهاية الفترة:</label>
-                <input type="time" name="end" value="23:59">
-            </div>
-            <button type="submit">إصدار التقرير</button>
-        </form>
-
-        {% if result %}
-            <div class="results">
-                {% if result.error %}
-                    <div class="error">{{ result.error }}</div>
-                {% else %>
-                    <h3>📊 التقرير لـ {{ result.date }} ({{ result.period }})</h3>
-                    <div class="stat-box"><span>إجمالي الرحلات:</span> <strong>{{ result.total }}</strong></div>
-                    <div class="stat-box"><span>هبطت:</span> <strong>{{ result.landed }}</strong></div>
-                    <div class="stat-box"><span>المتأخرة:</span> <strong>{{ result.delayed }}</strong></div>
-                    <div class="stat-box"><span>المتبقية:</span> <strong>{{ result.remaining }}</strong></div>
-                    <div class="stat-box"><span>ذروة الرحلات:</span> <strong>{{ result.peak }}</strong></div>
-                    
-                    <h4>⏱️ الفجوات الزمنية (15 دقيقة فأكثر):</h4>
-                    <ul>
-                        {% for gap in result.gaps %}
-                            <li>من {{ gap.from }} إلى {{ gap.to }} (المدة: {{ gap.minutes }} دقيقة)</li>
-                        {% else %}
-                            <li>لا توجد فجوات.</li>
-                        {% endfor %}
-                    </ul>
-                    {% if result.largest_gap %}
-                        <p style="color: #d32f2f; font-weight: bold;">🚨 أكبر فجوة: {{ result.largest_gap.minutes }} دقيقة</p>
-                    {% endif %}
-                {% endif %}
-            </div>
-        {% endif %}
-    </div>
-</body>
-</html>
-"""
-
 @app.route("/", methods=["GET", "POST"])
 def index():
     result = None
@@ -244,7 +173,9 @@ def index():
         start = request.form.get("start", "00:00")
         end = request.form.get("end", "23:59")
         result = analyzer.analyze(day, start, end)
-    return render_template_string(HTML_TEMPLATE, result=result)
+    
+    # هنا تم تغييرها لاستخدام render_template للبحث في مجلد templates تلقائياً
+    return render_template("index.html", result=result)
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000)
