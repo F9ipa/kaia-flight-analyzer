@@ -1,20 +1,27 @@
 from datetime import datetime, timedelta
 from collections import Counter
 from flask import Flask, render_template, request
-import requests
+import cloudscraper
+import os
 
 app = Flask(__name__)
 
-# [نفس كلاس FlightAnalyzer السابق تماماً بدون أي تغيير]
 class FlightAnalyzer:
     def __init__(self):
         self.url = "https://www.kaia.sa/ext-api/flightsearch/flights"
         self.headers = {
             "Accept": "application/json",
             "Authorization": "Basic dGVzdGVyOlRoZTMzY3JldA==",
-            "User-Agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X)"
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
         }
-        self.session = requests.Session()
+        # استخدام cloudscraper لتجاوز حماية Cloudflare
+        self.session = cloudscraper.create_session(
+            browser={
+                'browser': 'chrome',
+                'platform': 'windows',
+                'desktop': True
+            }
+        )
         self.session.headers.update(self.headers)
 
     def fetch_data(self, start_iso, end_iso):
@@ -108,7 +115,7 @@ class FlightAnalyzer:
 
         data = self.fetch_data(start_iso, end_iso)
         if data is None:
-            return {"error": "حدث خطأ أثناء الاتصال بموقع المطار."}
+            return {"error": "حدث خطأ أثناء الاتصال بموقع المطار (قد تكون حماية Cloudflare حظرت الطلب)."}
         if not data:
             return {"error": "لا توجد رحلات مطابقة للفترة المحددة."}
 
@@ -174,8 +181,8 @@ def index():
         end = request.form.get("end", "23:59")
         result = analyzer.analyze(day, start, end)
     
-    # هنا تم تغييرها لاستخدام render_template للبحث في مجلد templates تلقائياً
     return render_template("index.html", result=result)
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=5000)
+    port = int(os.environ.get("PORT", 5000))
+    app.run(host="0.0.0.0", port=port)
